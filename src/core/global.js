@@ -1,10 +1,27 @@
 import { create } from "zustand";
 import secure from "./secure";
-import api from "./api";
+import api, { ADDRESS } from "./api";
+import { parse } from "react-native-svg";
 
-const useGlobal = create((set) => ({
+// ----------------------
+// socket receive message handlers
+// ----------------------
 
+function responseThumbnail(set, get, data) {
+  set((state) => ({
+    user: data
+  }))
+}
+
+
+
+
+
+const useGlobal = create((set, get) => ({
+
+  // ---------------------------
   // initialization
+  // ---------------------------
 
   initialized: false,
 
@@ -18,11 +35,14 @@ const useGlobal = create((set) => ({
           password: credentials.password
         })
 
-        // if (response.status !== 200) {
-        //   throw 'Authentication error!'
-        // }
+        if (response.status !== 200) {
+          throw 'Authentication error!'
+        }
 
         const user = response.data.user
+        const tokens = response.data.tokens
+
+        secure.set('tokens', tokens)
 
         set((state) => ({
           initialized: true,
@@ -41,12 +61,19 @@ const useGlobal = create((set) => ({
     }))
   }
   ,
+
+
+  // ------------------------------
   // authentication
+  // ------------------------------
+
+
   authenticated: false,
   user: {},
 
-  login: (credentials, user) => {
+  login: (credentials, user, tokens) => {
     secure.set('credentials', credentials)
+    secure.set('tokens', tokens)
     set((state) => ({
       authenticated: true,
       user: user,
@@ -59,10 +86,78 @@ const useGlobal = create((set) => ({
       authenticated: false,
       user: {},
     }))
+  },
+
+  // ---------------------
+  // Websocket
+  // --------------------
+
+  socket: null,
+
+  socketConnect: async () => {
+
+    const tokens = await secure.get('tokens')
+
+    const url = `ws://${ADDRESS}/chat/?token=${tokens.access}`
+
+    const socket = new WebSocket(url)
+
+    socket.onopen = () => {
+      console.log('socket.onopen');
+    }
+    socket.onmessage = (e) => {
+      console.log('socket.onmessage');
+      // convert data to javascript object
+      const parsed = JSON.parse(e.data)
+      console.log('socket.onmessage data==>', parsed);
+
+      const responses = {
+        'thumbnail': responseThumbnail
+      }
+
+      const resp = responses[parsed.source]
+      if (!resp) {
+        console.log('parsed.sourse ', parsed.source + " not found");
+        return
+      }
+      // call response function
+      resp(set, get, parsed.data)
+
+    }
+    socket.onerror = () => {
+      console.log('socket.onerror');
+    }
+    socket.onclose = () => {
+      console.log('socket.onclose');
+    }
+
+    set((state) => ({
+      socket: socket
+    }))
+
+  },
+
+  socketClose: () => {
+    console.log('socket close hua bro');
+
+  },
+
+
+  // -------------------------
+  // Upload Thumbnail
+  // -------------------------
+  uploadThumbnail: (file) => {
+    const socket = get().socket
+    socket.send(JSON.stringify({
+      source: 'thumbnail',
+      base64: file.base64,
+      filename: file.fileName,
+    }))
   }
 
-
 }))
+
+
 
 
 export default useGlobal;

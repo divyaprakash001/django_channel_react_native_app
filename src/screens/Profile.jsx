@@ -3,26 +3,26 @@ import React from 'react'
 import useGlobal from '../core/global'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker'
+import utils from '../core/utils'
+import Thumbnail from '../common/Thumbnail'
 
 const ProfileImage = () => {
+
+  const uploadThumbnail = useGlobal(state => state.uploadThumbnail)
+  const user = useGlobal(state => state.user)
+
   return (
     <>
       <TouchableOpacity
         onPress={() => {
           launchImageLibrary({ includeBase64: true }, (response) => {
-            console.log('response--<', response);
             if (response.didCancel) return
             const file = response.assets[0]
-            console.log(file);
-
+            uploadThumbnail(file)
           })
         }}
         style={{ marginBottom: 20 }}>
-        <Image
-          source={require('../assets/profile.png')}
-          // source={user.thumbnail}
-          style={{ width: 180, height: 180, borderRadius: 90 }}
-        />
+        <Thumbnail size={180} url={user.thumbnail} />
         <View style={{
           position: 'absolute',
           bottom: 0,

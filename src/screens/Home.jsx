@@ -3,10 +3,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import Friends from './Friends'
 import Requests from './Requests'
 import Profile from './Profile'
-import { useLayoutEffect } from 'react'
-
+import { useEffect, useLayoutEffect } from 'react'
+import utils from '../core/utils'
 
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import useGlobal from '../core/global'
+import Thumbnail from '../common/Thumbnail'
 
 
 const Tab = createBottomTabNavigator();
@@ -14,10 +16,21 @@ const Tab = createBottomTabNavigator();
 
 export default function Home({ navigation }) {
 
+  const socketConnect = useGlobal(state => state.socketConnect)
+  const socketClose = useGlobal(state => state.socketClose)
+  const user = useGlobal(state => state.user)
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false
     })
+  }, [])
+
+  useEffect(() => {
+    socketConnect()
+    return () => {
+      socketClose()
+    }
   }, [])
 
 
@@ -26,10 +39,7 @@ export default function Home({ navigation }) {
       screenOptions={({ route, navigation }) => ({
         headerLeft: () => (
           <View style={{ marginLeft: 16 }}>
-            <Image
-              source={require('../assets/profile.png')}
-              style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#e0e0e0', marginRight: 4 }}
-            />
+            <Thumbnail size={28} url={user.thumbnail} />
           </View>
         ),
         headerRight: () => (
