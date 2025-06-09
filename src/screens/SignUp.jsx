@@ -90,7 +90,9 @@ function SignUp({ navigation }) {
           username: username,
           password: password1
         }
-        login(credentials, response.data.user)
+        login(credentials,
+          response.data.user,
+          response.data.tokens)
       })
 
       .catch(error => {

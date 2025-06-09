@@ -7,6 +7,13 @@ import { parse } from "react-native-svg";
 // socket receive message handlers
 // ----------------------
 
+function responseSearch(set, get, data) {
+  set((state) => ({
+    searchList: data
+  }))
+}
+
+
 function responseThumbnail(set, get, data) {
   set((state) => ({
     user: data
@@ -112,7 +119,8 @@ const useGlobal = create((set, get) => ({
       console.log('socket.onmessage data==>', parsed);
 
       const responses = {
-        'thumbnail': responseThumbnail
+        'search': responseSearch,
+        'thumbnail': responseThumbnail,
       }
 
       const resp = responses[parsed.source]
@@ -138,10 +146,36 @@ const useGlobal = create((set, get) => ({
   },
 
   socketClose: () => {
+    const socket = get().socket
+    if (socket) {
+      socket.close()
+    }
+    set((state) => ({
+      socket: null
+    }))
     console.log('socket close hua bro');
 
   },
 
+
+  // -------------------------
+  // Search
+  // -------------------------
+
+  searchList: null,
+  searchUsers: (query) => {
+    if (query) {
+      const socket = get().socket
+      socket.send(JSON.stringify({
+        source: 'search',
+        query: query,
+      }))
+    } else {
+      set((state) => ({
+        searchList: null
+      }))
+    }
+  },
 
   // -------------------------
   // Upload Thumbnail
@@ -153,7 +187,11 @@ const useGlobal = create((set, get) => ({
       base64: file.base64,
       filename: file.fileName,
     }))
-  }
+  },
+
+
+
+
 
 }))
 

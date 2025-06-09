@@ -33,6 +33,10 @@ export default function Home({ navigation }) {
     }
   }, [])
 
+  const onSearch = () => {
+    navigation.navigate('Search')
+  }
+
 
   return (
     <Tab.Navigator
@@ -43,7 +47,9 @@ export default function Home({ navigation }) {
           </View>
         ),
         headerRight: () => (
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={onSearch}
+          >
             <FontAwesomeIcon
               style={{ marginRight: 16 }}
               icon='magnifying-glass'
