@@ -25,7 +25,8 @@ function SearchButton({ user }) {
     )
   }
 
-  // const requestConnect = useGlobal(state => state.requestConnect)
+  const requestConnect = useGlobal(state => state.requestConnect)
+  const requestAccept = useGlobal(state => state.requestAccept)
 
   const data = {}
 
@@ -33,7 +34,7 @@ function SearchButton({ user }) {
     case 'no-connection':
       data.text = 'Connect'
       data.disabled = false
-      data.onPress = () => requestConnect(user.username)
+      data.onPress = requestConnect(user.username)
       break
     case 'pending-them':
       data.text = 'Pending'
@@ -43,7 +44,7 @@ function SearchButton({ user }) {
     case 'pending-me':
       data.text = 'Accept'
       data.disabled = false
-      data.onPress = () => { }
+      data.onPress = () => requestAccept(user.username)
       break
     default: break
   }

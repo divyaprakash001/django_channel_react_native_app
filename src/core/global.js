@@ -7,6 +7,79 @@ import { parse } from "react-native-svg";
 // socket receive message handlers
 // ----------------------
 
+function responseRequestConnect(set, get, connection) {
+  const user = get().user
+  //  if i was the one that made the request, 
+  // update the search list row
+  if (user.username === connection.sender.username) {
+    const searchList = [...get().searchList]
+    const searchIndex = searchList.findIndex(
+      request => request.username === connection.receiver.username
+    )
+    if (searchIndex >= 0) {
+      searchList[searchIndex].status = 'pending-them'
+      set((state) => ({
+        searchList: searchList
+      }))
+    }
+
+    // if they were the one that send the connect request,
+    // add request to request lists
+  } else {
+    // do something
+    const requestList = [...get().requestList]
+    const requestIndex = requestList.findIndex(
+      request => request.sender.username === connection.sender.username
+    )
+    if (requestIndex === -1) {
+      requestList.unshift(connection)
+      set((state) => ({
+        requestList: requestList
+      }))
+    }
+  }
+
+  // set((state) => ({
+  //   requestLists: data
+  // }))
+}
+
+function responseRequestList(set, get, requestList) {
+  set((state) => ({
+    requestList: requestList
+  }))
+}
+
+function responseRequestFriends(set, get, friendList) {
+  set((state) => ({
+    friendList: friendList
+  }))
+}
+
+
+function responseRequestAccept(set, get, acceptedConnection) {
+  const requestList = [...get().requestList]
+  console.log('request username', acceptedConnection.sender.username);
+
+  const requestIndex = requestList.findIndex(
+    request => request.sender.username === acceptedConnection.sender.username
+  )
+  console.log('requestList requestList', requestList)
+  console.log('request index', requestIndex)
+
+  const requestList2 = requestList.filter(
+    request => request.sender.username !== acceptedConnection.sender.username
+  )
+  console.log('requestList2', requestList2)
+  if (requestIndex >= 0) {
+    requestList[requestIndex].status = 'connected'
+    set((state) => ({
+      requestList: requestList2
+    }))
+  }
+
+}
+
 function responseSearch(set, get, data) {
   set((state) => ({
     searchList: data
@@ -111,6 +184,9 @@ const useGlobal = create((set, get) => ({
 
     socket.onopen = () => {
       console.log('socket.onopen');
+      socket.send(JSON.stringify({
+        source: 'request.list'
+      }))
     }
     socket.onmessage = (e) => {
       console.log('socket.onmessage');
@@ -119,6 +195,10 @@ const useGlobal = create((set, get) => ({
       console.log('socket.onmessage data==>', parsed);
 
       const responses = {
+        'request.connect': responseRequestConnect,
+        'request.list': responseRequestList,
+        'request.accept': responseRequestAccept,
+        'request.friends': responseRequestFriends,
         'search': responseSearch,
         'thumbnail': responseThumbnail,
       }
@@ -177,6 +257,48 @@ const useGlobal = create((set, get) => ({
     }
   },
 
+
+  // -------------------------
+  // Friend Lists
+  // -------------------------
+
+  friendList: null,
+  fetchFriends: () => {
+    const socket = get().socket
+    socket.send(JSON.stringify({
+      source: 'request.friends',
+      // username: username,
+    }))
+  },
+
+  // ------------------------------
+  // Request Connect
+  // ------------------------------
+
+
+
+  requestList: null,
+
+  requestAccept: (username) => {
+    const socket = get().socket
+    socket.send(JSON.stringify({
+      source: 'request.accept',
+      username: username,
+    }))
+  },
+
+
+  requestConnect: (username) => {
+    console.log("request connected is called for ", username)
+    const socket = get().socket
+    socket.send(JSON.stringify({
+      source: 'request.connect',
+      username: username,
+    }))
+
+  },
+
+
   // -------------------------
   // Upload Thumbnail
   // -------------------------
@@ -188,7 +310,6 @@ const useGlobal = create((set, get) => ({
       filename: file.fileName,
     }))
   },
-
 
 
 
