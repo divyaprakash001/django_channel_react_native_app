@@ -2,6 +2,7 @@ import { create } from "zustand";
 import secure from "./secure";
 import api, { ADDRESS } from "./api";
 import { parse } from "react-native-svg";
+import { useReducer } from "react";
 
 // ----------------------
 // socket receive message handlers
@@ -57,26 +58,49 @@ function responseRequestFriends(set, get, friendList) {
 }
 
 
+
 function responseRequestAccept(set, get, acceptedConnection) {
-  const requestList = [...get().requestList]
-  console.log('request username', acceptedConnection.sender.username);
+  const user = get().user
+  // if i was the one that accepted the requesy, remove
+  if (user.username === acceptedConnection.receiver.username) {
+    const requestList = [...get().requestList]
+    const requestIndex = requestList.findIndex(
+      request => request.id === acceptedConnection.id
+    )
+    if (requestIndex >= 0) {
+      requestList.splice(requestIndex, 1)
+      set((state) => ({
+        requestList: requestList
+      }))
+    }
 
-  const requestIndex = requestList.findIndex(
-    request => request.sender.username === acceptedConnection.sender.username
-  )
-  console.log('requestList requestList', requestList)
-  console.log('request index', requestIndex)
+    // if the corresponding user is contained within the searchList for the acceptor or the acceptee,
+    // update the state of the searchList Item
+    const sl = get().searchList
+    if (sl === null) return
+    const searchList = [...sl]
+    let searchIndex = -1
+    // if this user accepted
+    if (useReducer.username === acceptedConnection.receiver.username) {
+      searchIndex = searchList.findIndex(
+        user => user.username === acceptedConnection.sender.username
+      )
+    } else {
+      searchIndex = searchList.findIndex(
+        user => user.username === acceptedConnection.receiver.username
+      )
+    }
+    if (searchIndex >= 0) {
+      searchList[searchIndex].status = 'connected'
+      set((state) => ({
+        searchList: searchList
+      }))
+    }
 
-  const requestList2 = requestList.filter(
-    request => request.sender.username !== acceptedConnection.sender.username
-  )
-  console.log('requestList2', requestList2)
-  if (requestIndex >= 0) {
-    requestList[requestIndex].status = 'connected'
-    set((state) => ({
-      requestList: requestList2
-    }))
+
   }
+
+
 
 }
 
@@ -187,6 +211,10 @@ const useGlobal = create((set, get) => ({
       socket.send(JSON.stringify({
         source: 'request.list'
       }))
+
+      socket.send(JSON.stringify({
+        source: 'friend.list'
+      }))
     }
     socket.onmessage = (e) => {
       console.log('socket.onmessage');
@@ -198,7 +226,7 @@ const useGlobal = create((set, get) => ({
         'request.connect': responseRequestConnect,
         'request.list': responseRequestList,
         'request.accept': responseRequestAccept,
-        'request.friends': responseRequestFriends,
+        'friend.list': responseRequestFriends,
         'search': responseSearch,
         'thumbnail': responseThumbnail,
       }
@@ -263,13 +291,7 @@ const useGlobal = create((set, get) => ({
   // -------------------------
 
   friendList: null,
-  fetchFriends: () => {
-    const socket = get().socket
-    socket.send(JSON.stringify({
-      source: 'request.friends',
-      // username: username,
-    }))
-  },
+
 
   // ------------------------------
   // Request Connect
