@@ -40,9 +40,6 @@ function responseRequestConnect(set, get, connection) {
     }
   }
 
-  // set((state) => ({
-  //   requestLists: data
-  // }))
 }
 
 function responseRequestList(set, get, requestList) {
@@ -51,7 +48,58 @@ function responseRequestList(set, get, requestList) {
   }))
 }
 
+
+
+function messageSendRequest(set, get, data) {
+  const username = data.friend.username
+  // move friendlist item for this friend to the start of list, 
+  // update the preview text 
+  // and update the time stamp
+  const friendlist = [...get().friendList]
+  const friendIndex = friendlist.findIndex(
+    item => item.friend.username === username
+  )
+  if (friendIndex >= 0) {
+    const item = friendlist[friendIndex]
+    item.preview = data.message.text
+    item.updated = data.created
+    friendlist.splice(friendIndex, 1)
+    friendlist.unshift(item)
+    set((state) => ({
+      friendList: friendlist
+    }))
+  }
+
+  // if the messafe data doesnot belong to this friend then donot update the messafe list, as a fresh
+  // messageList will be loaded te next time the user opens the correct chat window
+  if (username !== get().messagesUsername) { }
+
+  const messagesList = [data.message, ...get().messagesList]
+  set((state) => ({
+    messagesList: messagesList
+  }))
+
+}
+
+function messageListRequest(set, get, data) {
+  set((state) => ({
+    messagesList: [...get().messagesList, ...data.messages],
+    messagesUsername: data.friend.username,
+  }))
+}
+
+
+
+
 function responseRequestFriends(set, get, friendList) {
+  set((state) => ({
+    friendList: friendList
+  }))
+}
+
+
+function responseFriendNew(set, get, friend) {
+  const friendList = [friend, ...get().friendList]
   set((state) => ({
     friendList: friendList
   }))
@@ -147,6 +195,7 @@ const useGlobal = create((set, get) => ({
         const tokens = response.data.tokens
 
         secure.set('tokens', tokens)
+        console.log('signin ho gya buai');
 
         set((state) => ({
           initialized: true,
@@ -223,10 +272,13 @@ const useGlobal = create((set, get) => ({
       console.log('socket.onmessage data==>', parsed);
 
       const responses = {
+        'message.send': messageSendRequest,
+        'message.list': messageListRequest,
         'request.connect': responseRequestConnect,
         'request.list': responseRequestList,
         'request.accept': responseRequestAccept,
         'friend.list': responseRequestFriends,
+        'friend.new': responseFriendNew,
         'search': responseSearch,
         'thumbnail': responseThumbnail,
       }
@@ -291,6 +343,37 @@ const useGlobal = create((set, get) => ({
   // -------------------------
 
   friendList: null,
+
+
+  // ------------------------------
+  // Messages
+  // ------------------------------
+  messagesList: [],
+  messagesUsername: null,
+  messageList: (connectionId, page = 0) => {
+    if (page === 0) {
+      set((state) => ({
+        messagesList: [],
+        messagesUsername: null,
+      }))
+    }
+    const socket = get().socket
+    socket.send(JSON.stringify({
+      source: 'message.list',
+      connectionId: connectionId,
+      page: page
+    }))
+  },
+
+
+  messageSend: (connectionId, message) => {
+    const socket = get().socket
+    socket.send(JSON.stringify({
+      source: 'message.send',
+      connectionId: connectionId,
+      message: message
+    }))
+  },
 
 
   // ------------------------------

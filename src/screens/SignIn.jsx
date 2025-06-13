@@ -70,9 +70,11 @@ function SignIn({ navigation }) {
         }
 
         if (response.data.user.username != '')
-          login(credentials,
-            response.data.user,
-            response.data.tokens)
+          console.log(response.data.user.username);
+
+        login(credentials,
+          response.data.user,
+          response.data.tokens)
 
       })
 
